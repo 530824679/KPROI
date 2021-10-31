@@ -33,7 +33,7 @@ from utils.torch_utils import select_device, save_checkpoint, get_saved_state
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, logger, tb_writer):
+def train(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, logger, tb_writer):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -91,7 +91,7 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp
 
         start_time = time.time()
 
-def train(hyp, device, tb_writer=None):
+def main(hyp, device, tb_writer=None):
     # create model
     torch.cuda.set_device(device)
     model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=True)
@@ -126,7 +126,7 @@ def train(hyp, device, tb_writer=None):
             logger.info('>>> Epoch: [{}/{}]'.format(epoch, hyp['end_epoch']))
 
         # train for one epoch
-        train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, logger, tb_writer)
+        train(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, logger, tb_writer)
         if (epoch % hyp['ckpt_freq'] == 0):
             val_dataloader = create_val_dataloader(hyp)
             print('number of batches in val_dataloader: {}'.format(len(val_dataloader)))
@@ -195,4 +195,4 @@ if __name__ == '__main__':
     tb_writer = SummaryWriter(log_dir=hyp['logs_dir'])
 
     # 调用train()函数，开始训练
-    train(hyp, device, tb_writer)
+    main(hyp, device, tb_writer)
