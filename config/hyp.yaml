@@ -4,7 +4,7 @@ ckpt_dir: './checkpoints'
 checkpoints: ''
 logs_dir: './logs'          # 日志路径
 logs_freq: 20               # 日志频率
-print_freq: 20              # 打印频率
+print_freq: 1              # 打印频率
 ckpt_freq: 20                # 权重频率
 num_workers: 4              # 数据加载线程数
 is_shuffle: True
@@ -29,10 +29,8 @@ heatmap_size: [64, 48]
 num_keypoints: 6
 pretrained: './weights/resnet50-19c8e357.pth'
 
-# 数据相关参数
-data_dir: './datas'               # 数据路径
-train_set: './datas/train.txt'    # 训练集地址
-valid_set: './datas/val.txt'    # 验证集地址
+train_image: 'F:\\img'
+train_label: 'F:\\anno'
 hflip: 0.5
 rotate_factor: 40
 scale_factor: 0.3

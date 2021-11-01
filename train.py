@@ -55,11 +55,11 @@ def train(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, 
     for batch_idx, batch_data in enumerate(tqdm(train_dataloader)):
         data_time.update(time.time() - start_time)
         inputs, targets, target_weight = batch_data
-        global_step = num_iters_per_epoch * (epoch - 1) + batch_idx + 1
+        global_step = num_iters_per_epoch * epoch + batch_idx + 1
 
         batch_size = inputs.size(0)
         targets = targets.to(device, non_blocking=True)
-        target_weight = target_weight.cuda(non_blocking=True)
+        target_weight = target_weight.to(device, non_blocking=True)
         #for k in targets.keys():
         #    targets[k] = targets[k].to(device, non_blocking=True)
         #    target_weight[k] = target_weight[k].cuda(non_blocking=True)
@@ -89,18 +89,31 @@ def train(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, 
         #    if (global_step % hyp['ckpt_freq']) == 0:
         #        tb_writer.add_scalars('Train', total_loss, global_step)
 
+        if batch_idx % hyp['print_freq'] == 0:
+            msg = 'Epoch: [{0}][{1}/{2}]\t' \
+                  'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
+                  'Speed {speed:.1f} samples/s\t' \
+                  'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
+                  'Loss {loss.val:.5f} ({loss.avg:.5f})\t' \
+                  'Accuracy {acc.val:.3f} ({acc.avg:.3f})'.format(
+                      epoch, batch_idx, num_iters_per_epoch, batch_time=batch_time,
+                      speed=inputs.size(0)/batch_time.val,
+                      data_time=data_time, loss=losses, acc=accuracy)
+            print(msg)
+
         # Log message
         if logger is not None:
-            if (global_step % hyp['print_freq']) == 0:
+            if (global_step % hyp['ckpt_freq']) == 0:
                 logger.info(progress.get_message(batch_idx))
 
         start_time = time.time()
 
 def main(hyp, device, tb_writer=None):
     # create model
-    torch.cuda.set_device(device)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(device)
     model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=True)
-    model = model.cuda(device)
+    model = model.to(device)
 
     num_parameters = parameters_num(model)
     logger.info('number of trained parameters of the model: {}'.format(num_parameters))
@@ -152,14 +165,14 @@ def main(hyp, device, tb_writer=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train keypoints network')
     parser.add_argument('--config', type=str, default='./config/hyp.yaml', help='the path of the pretrained weights')
-    parser.add_argument('--device', type=str, default='0', help='number of select device')
+    parser.add_argument('--device', type=str, default='cpu', help='number of select device')
     opt = parser.parse_args()
 
     hyp = check_file(opt.config)
     assert len(hyp), '--hyp file must be specified'
 
     # 载入初始超参
-    with open(hyp) as f:
+    with open(hyp, encoding='UTF-8') as f:
         hyp = yaml.load(f, Loader=yaml.SafeLoader)
 
     device = select_device(opt.device, batch_size=hyp['batch_size'])

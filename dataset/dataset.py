@@ -24,9 +24,9 @@ from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
 
+
 class KeypointsDataset(Dataset):
     def __init__(self, hyp, mode='train', aug_transforms=None, hflip_prob=0., num_samples=None):
-        self.data_dir = hyp['data_dir']
         self.sigma = 2
 
         self.num_keypoints = 4
@@ -42,37 +42,47 @@ class KeypointsDataset(Dataset):
         self.mean_rgb = np.array([0.485, 0.456, 0.406], np.float32).reshape(1, 1, 3)
         self.std_rgb = np.array([0.229, 0.224, 0.225], np.float32).reshape(1, 1, 3)
 
+        self.aug_transforms = aug_transforms
+
         assert mode in ['train', 'val', 'test'], 'Invalid mode: {}'.format(mode)
         self.mode = mode
-        self.is_test = (self.mode == 'test')
-        sub_folder = 'testing' if self.is_test else 'training'
+        self.test_mode = False
+        if self.mode == "train":
+            self.images_dir = hyp["train_image"]
+            self.labels_dir = hyp["train_label"]
 
-        self.aug_transforms = aug_transforms
-        self.images_dir = os.path.join(self.data_dir, sub_folder, 'images')
-        self.labels_dir = os.path.join(self.data_dir, sub_folder, 'labels')
-        split_txt_path = os.path.join(self.data_dir, 'ImageSets', '{}.txt'.format(mode))
-        self.sample_list = [x.strip() for x in open(split_txt_path).readlines()]
+        if self.mode == "test":
+            self.test_mode = True
+            self.images_dir = hyp["test_image"]
+            self.labels_dir = hyp["test_label"]
+
+        index_txt = os.path.join(self.images_dir, 'index.txt')
+        self.filename_list = [x.strip() for x in open(index_txt).readlines()]
 
         if num_samples is not None:
-            self.sample_list = self.sample_list[:num_samples]
-        self.num_samples = len(self.sample_list)
+            self.filename_list = self.filename_list[:num_samples]
+        self.num_files = len(self.filename_list)
 
         self.data_db = []
         # Find all labels in dir with json format
         file_cnt = 0
-        for sample in self.sample_list:
+        for filename in self.filename_list:
             file_cnt += 1
+            self.append_dataset(filename)
+
             if file_cnt % 500 == 0:
                 print("{} files are processed!".format(file_cnt))
 
-            self.get_label(sample)
-        print("data_db len is %d", len(self.data_db))
+            if len(self.data_db) % 500 == 0:
+                print("{} boxes are loaded!".format(len(self.data_db)))
+
+        print("Dataset length is %d, number of files is %d", len(self.data_db), self.num_files)
 
     def __len__(self):
         return len(self.data_db)
 
     def __getitem__(self, index):
-        if self.is_test:
+        if self.test_mode:
             return self.load_image(index)
         else:
             return self.load_image_and_label(index)
@@ -136,8 +146,14 @@ class KeypointsDataset(Dataset):
 
         # Generate the target edge heatmap
         bottom_left = np.array([keypoints[2][0], keypoints[3][1]])
-        heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
-        heatmap[self.num_keypoints + self.num_edges - 1] = self.generate_target_edge(bottom_left, keypoints[3])
+
+        # Left or right target edge
+        if keypoints[1][0] < keypoints[2][0]:
+            heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
+        elif keypoints[1][0] > keypoints[3][0]:
+            heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], keypoints[3])
+
+        heatmap[self.num_keypoints + 1] = self.generate_target_edge(bottom_left, keypoints[3])
 
         heatmap = torch.from_numpy(heatmap)
         target_weight = torch.from_numpy(target_weight)
@@ -154,7 +170,7 @@ class KeypointsDataset(Dataset):
 
         return image_path, image
 
-    def get_label(self, filename):
+    def append_dataset(self, filename):
         label_path = os.path.join(self.labels_dir, '{}.json'.format(filename))
         with open(label_path, 'r') as json_file:
             data = json.load(json_file)
@@ -193,8 +209,6 @@ class KeypointsDataset(Dataset):
                     'keypoints_vis': keypoints_vis,
                 })
 
-                if len(self.data_db) % 500 == 0:
-                    print("{} boxes are loaded!".format(len(self.data_db)))
 
     def generate_target_edge(self, start, stop):
         target_edge = np.zeros([self.heatmap_size[1], self.heatmap_size[0]], dtype=float)

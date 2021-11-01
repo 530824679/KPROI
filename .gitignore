@@ -133,3 +133,5 @@ logs/
 checkpoints/
 datas/
 .idea/
+saved_weights/
+visualized_images/

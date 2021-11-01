@@ -28,28 +28,24 @@ def filter_dataset(data_dir):
         if not os.path.exists(path):
             os.remove(os.path.join(images_dir, file))
 
-def write_txt(data_dir):
-    src_ImageSets_dir = os.path.join(data_dir, "ImageSets")
-    src_Images_dir = os.path.join(data_dir, "training/images")
+
+def write_txt(img_dir, label_dir):
 
     train_list = []
-    filelist = os.listdir(src_Images_dir)
-    for i in filelist:
+    filelist = os.listdir(label_dir)
+    for filename in filelist:
         try:
-            name = i.split('png')[0]
-            # print(name)
-            train_list.append(name[:-1])
-
+            train_list.append(os.path.splitext(filename)[0])
         except:
-            print(i + 'wrong')
+            print(filename + 'wrong')
             continue
 
-    with open(os.path.join(src_ImageSets_dir, 'train.txt'), 'w') as json_file:
+    with open(os.path.join(img_dir, 'index.txt'), 'w') as index_file:
         for text in train_list:
             # print(text)
-            json_file.write(text + '\n')
+            index_file.write(text + '\n')
 
 
 if __name__ == '__main__':
     # filter_dataset("/home/chenwei/HDD/Project/private/KPROI/datas/training")
-    write_txt('/home/chenwei/HDD/Project/private/KPROI/datas')
+    write_txt("F:\\img", "F:\\anno")
