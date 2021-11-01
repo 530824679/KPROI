@@ -12,10 +12,15 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
 import logging
 import torch
 import torch.nn as nn
-from models.basenet import BasicBlock, Bottleneck
+
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parentdir)
+
+from KPROI.models.basenet import BasicBlock, Bottleneck
 from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
