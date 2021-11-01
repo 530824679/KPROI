@@ -135,9 +135,9 @@ class KeypointsDataset(Dataset):
         heatmap[0:self.num_keypoints] = target
 
         # Generate the target edge heatmap
-        # bottom_left = np.array([keypoints[2][0], keypoints[3][1]])
-        # heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
-        # heatmap[self.num_keypoints + 1] = self.generate_target_edge(bottom_left, keypoints[3])
+        bottom_left = np.array([keypoints[2][0], keypoints[3][1]])
+        heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
+        heatmap[self.num_keypoints + self.num_edges - 1] = self.generate_target_edge(bottom_left, keypoints[3])
 
         heatmap = torch.from_numpy(heatmap)
         target_weight = torch.from_numpy(target_weight)
@@ -197,73 +197,68 @@ class KeypointsDataset(Dataset):
                     print("{} boxes are loaded!".format(len(self.data_db)))
 
     def generate_target_edge(self, start, stop):
-        try:
-            target_edge = np.zeros([self.heatmap_size[1], self.heatmap_size[0]], dtype=float)
+        target_edge = np.zeros([self.heatmap_size[1], self.heatmap_size[0]], dtype=float)
 
-            normal_distrib = [1, 0.7, 0.4, 0.2, 0.1, 0.05]
-            feat_stride = self.input_size / self.heatmap_size
+        normal_distrib = [1, 0.7, 0.4, 0.2, 0.1, 0.05]
+        feat_stride = self.input_size / self.heatmap_size
 
-            start = np.floor(start / feat_stride).astype(int)
-            stop = np.floor(stop / feat_stride).astype(int)
+        start = np.floor(start / feat_stride).astype(int)
+        stop = np.floor(stop / feat_stride).astype(int)
 
-            start = np.minimum(start, self.heatmap_size - 1)
-            stop = np.minimum(stop, self.heatmap_size - 1)
+        start = np.minimum(start, self.heatmap_size - 1)
+        stop = np.minimum(stop, self.heatmap_size - 1)
 
-            # Using DDA algorithm to generate the line and push back to the queue
-            dx = stop[0] - start[0]
-            dy = stop[1] - start[1]
-            k = dy / dx
+        # Using DDA algorithm to generate the line and push back to the queue
+        dx = stop[0] - start[0]
+        dy = stop[1] - start[1]
+        k = dy / (dx+1)
 
-            queue = []
+        queue = []
 
-            if abs(k) <= 1:
-                if start[0] > stop[0]:
-                    tmp = start
-                    start = stop
-                    stop = tmp
+        if abs(k) <= 1:
+            if start[0] > stop[0]:
+                tmp = start
+                start = stop
+                stop = tmp
 
-                for cx in range(start[0], stop[0]):
-                    cy = round(start[1] + k * (cx - start[0]))
-                    queue.append((cx, cy, 0))
-                    target_edge[cy][cx] = 1
-            else:
-                if start[1] > stop[1]:
-                    tmp = start
-                    start = stop
-                    stop = tmp
+            for cx in range(start[0], stop[0]):
+                cy = int(round(start[1] + k * (cx - start[0])))
+                queue.append((cx, cy, 0))
+                target_edge[cy][cx] = 1
+        else:
+            if start[1] > stop[1]:
+                tmp = start
+                start = stop
+                stop = tmp
 
-                for cy in range(start[1], stop[1]):
-                    cx = round(start[0] + (1 / k) * (cy - start[1]))
-                    queue.append((cx, cy, 0))
-                    target_edge[cy][cx] = 1
+            for cy in range(start[1], stop[1]):
+                cx = int(round(start[0] + (1 / k) * (cy - start[1])))
+                queue.append((cx, cy, 0))
+                target_edge[cy][cx] = 1
 
-            queue.append((stop[0], stop[1], 0))
-            target_edge[stop[1]][stop[0]] = 1
+        queue.append((stop[0], stop[1], 0))
+        target_edge[stop[1]][stop[0]] = 1
 
-            # u r d l
-            dx = [0, 1, 0, -1]
-            dy = [-1, 0, 1, 0]
+        # u r d l
+        dx = [0, 1, 0, -1]
+        dy = [-1, 0, 1, 0]
 
-            while len(queue) > 0:
-                cx, cy, depth = queue.pop(0)
-                for i in range(4):
-                    cx += dx[i]
-                    cy += dy[i]
+        while len(queue) > 0:
+            cx, cy, depth = queue.pop(0)
+            for i in range(4):
+                cx += dx[i]
+                cy += dy[i]
 
-                    if cx >= 0 and cy >= 0 and cx < self.heatmap_size[0] and cy < self.heatmap_size[1]:
-                        if target_edge[cy][cx] == 0:
-                            if depth < 5:
-                                queue.append((cx, cy, depth + 1))
-                                target_edge[cy][cx] = normal_distrib[depth + 1]
+                if cx >= 0 and cy >= 0 and cx < self.heatmap_size[0] and cy < self.heatmap_size[1]:
+                    if target_edge[cy][cx] == 0:
+                        if depth < 5:
+                            queue.append((cx, cy, depth + 1))
+                            target_edge[cy][cx] = normal_distrib[depth + 1]
 
-                    cx -= dx[i]
-                    cy -= dy[i]
+                cx -= dx[i]
+                cy -= dy[i]
 
-            return target_edge
-
-        except IndexError:
-            print("generate target edge error")
-
+        return target_edge
 
     def generate_target_keypoints(self, keypoints, keypoints_vis):
         '''

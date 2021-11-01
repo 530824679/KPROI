@@ -7,6 +7,10 @@
 # @Software: PyCharm
 # Description : None
 # --------------------------------------
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import sys
 import time
@@ -20,6 +24,7 @@ from pathlib import Path                            # 路径操作模块
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
+from valid import validate
 from dataset.dataloader import create_train_dataloader, create_val_dataloader
 from utils.misc import AverageMeter, ProgressMeter
 from loss.loss import KeyPointsMSELoss
@@ -143,29 +148,6 @@ def main(hyp, device, tb_writer=None):
 
     if tb_writer is not None:
         tb_writer.close()
-
-def validate(val_dataloader, model, device, hyp):
-    losses = AverageMeter('Loss', ':.4e')
-    criterion = KeyPointsMSELoss(hyp['use_target_weight'])
-
-    # switch to train mode
-    model.eval()
-    with torch.no_grad():
-        for batch_idx, batch_data in enumerate(tqdm(val_dataloader)):
-            images, targets, target_weight = batch_data
-
-            batch_size = images.size(0)
-            #for k in targets.keys():
-                #targets[k] = targets[k].to(device, non_blocking=True)
-            targets = targets.to(device, non_blocking=True)
-            images = images.to(device, non_blocking=True).float()
-            outputs = model(images)
-            total_loss = criterion(outputs, targets, 0)
-
-            reduced_loss = total_loss.data
-            losses.update(to_python_float(reduced_loss), batch_size)
-
-    return losses.avg
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train keypoints network')
