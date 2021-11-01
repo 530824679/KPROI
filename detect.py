@@ -46,8 +46,9 @@ def normalize_image(image):
 def predict_keypoints_from_roi(model, img_roi):
     model.eval()
     with torch.no_grad():
-        heatmaps = model(img_roi)
-        preds, _ = get_max_preds(heatmaps.detach().cpu().numpy())[0, :4, :] * 4 + 2
+        heatmaps = model(torch.FloatTensor(img_roi))
+        preds, _ = get_max_preds(heatmaps.detach().cpu().numpy())
+        preds = preds[0,: 4,:] *4 + 2
         return preds
 
 
@@ -130,13 +131,15 @@ if __name__ == '__main__':
 
                 # Apply norm for the cropped image
                 img_roi = normalize_image(img_roi)
-                img_roi = img_roi.transpose(2, 0, 1).reshape([1, 3, input_size[0], input_size[1]])
+                img_roi = img_roi.transpose(2, 0, 1).reshape([1, 3, input_size[1], input_size[0]])
 
                 # Predict!
                 keypoints = predict_keypoints_from_roi(model, img_roi)
+                keypoints[:, 0] = keypoints[:, 0] / input_size[0] * width_roi + left_most
+                keypoints[:, 1] = keypoints[:, 1] / input_size[1] * height_roi + top_most
 
                 image_bgr = draw_3D_on_cv_image(image_bgr, keypoints)
 
         cv2.imshow("Current Frame", image_bgr)
         cv2.waitKey(50)
-        # cv2.imwrite(os.path.join("Test", filename + ".png"), image_bgr)
+        # cv2.imwrite(os.path.join("Test", os.path.splitext(filename)[0] + ".png"), image_bgr)
