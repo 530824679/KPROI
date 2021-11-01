@@ -104,12 +104,6 @@ class KeypointsDataset(Dataset):
         db_rec = copy.deepcopy(self.data_db[index])
         image_path, image = self.get_image(db_rec['filename'])
 
-        # Apply the augmentation for the raw image
-        if self.aug_transforms:
-            image = self.aug_transforms(image=image)['image']
-
-        image = self.normalize_image(image)
-
         keypoints = db_rec['keypoints']
         keypoints_vis = db_rec['keypoints_vis']
 
@@ -125,6 +119,12 @@ class KeypointsDataset(Dataset):
         # Crop and resize the input image
         image = image[top_most:bottom_most, left_most:right_most]
         image = cv2.resize(image, tuple(self.input_size))
+
+        # Apply the augmentation for the cropped image
+        if self.aug_transforms:
+            image = self.aug_transforms(image=image)['image']
+        # Apply norm for the cropped image
+        image = self.normalize_image(image)
 
         # Apply the same transform to the coordinates of the ground truth
         # Translation

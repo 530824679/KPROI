@@ -68,7 +68,28 @@ def save_batch_image_with_keypoints(batch_image, batch_keypoints, batch_keypoint
             k = k + 1
     cv2.imwrite(filename, ndarr)
 
-def save_batch_heatmaps(batch_image, batch_heatmaps, file_name, normalize=True):
+
+def draw_3D_on_cv_image(image, preds):
+    preds = preds.astype(int)
+    bottom_left = np.array([preds[2][0], preds[3][1]]).astype(int)
+    top_right = np.array([preds[3][0], preds[2][1]]).astype(int)
+    cv2.line(image, tuple(preds[0]), tuple(preds[1]), (255, 127, 0), 1, cv2.LINE_AA)
+
+    if preds[1][0] < preds[2][0]:
+        cv2.line(image, tuple(bottom_left), tuple(preds[1]), (255, 64, 0), 1, cv2.LINE_AA)
+        cv2.line(image, tuple(preds[2]), tuple(preds[0]), (255, 64, 0), 1, cv2.LINE_AA)
+    elif preds[1][0] > preds[3][0]:
+        cv2.line(image, tuple(preds[3]), tuple(preds[1]), (255, 64, 0), 1, cv2.LINE_AA)
+        cv2.line(image, tuple(top_right), tuple(preds[0]), (255, 64, 0), 1, cv2.LINE_AA)
+
+    cv2.line(image, tuple(bottom_left), tuple(preds[2]), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(bottom_left), tuple(preds[3]), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(top_right), tuple(preds[2]), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(top_right), tuple(preds[3]), (255, 0, 0), 1, cv2.LINE_AA)
+
+    return image
+
+def save_batch_heatmaps(batch_image, batch_heatmaps, file_name, normalize=True, draw_3D=False):
     '''
     batch_image: [batch_size, channel, height, width]
     batch_heatmaps: ['batch_size, num_joints, height, width]
@@ -116,6 +137,9 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name, normalize=True):
             width_begin = heatmap_width * (j+1)
             width_end = heatmap_width * (j+2)
             grid_image[height_begin:height_end, width_begin:width_end, :] = masked_image
+
+        if draw_3D:
+            resized_image = draw_3D_on_cv_image(resized_image, preds[i])
 
         grid_image[height_begin:height_end, 0:heatmap_width, :] = resized_image
 

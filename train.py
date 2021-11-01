@@ -112,7 +112,7 @@ def main(hyp, device, tb_writer=None):
     # create model
     if torch.cuda.is_available():
         torch.cuda.set_device(device)
-    model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=True)
+    model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=False)
     model = model.to(device)
 
     num_parameters = parameters_num(model)
