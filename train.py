@@ -80,9 +80,9 @@ def train(train_dataloader, model, optimizer, lr_scheduler, epoch, hyp, device, 
         # torch.cuda.synchronize()
         batch_time.update(time.time() - start_time)
 
-        if tb_writer is not None:
-            if (global_step % hyp['ckpt_freq']) == 0:
-                tb_writer.add_scalars('Train', total_loss, global_step)
+        #if tb_writer is not None:
+        #    if (global_step % hyp['ckpt_freq']) == 0:
+        #        tb_writer.add_scalars('Train', total_loss, global_step)
 
         # Log message
         if logger is not None:
@@ -120,9 +120,6 @@ def main(hyp, device, tb_writer=None):
     for epoch in range(hyp['start_epoch'], hyp['end_epoch']):
         lr_scheduler.step()
         if logger is not None:
-            logger.info('{}'.format('*-' * 40))
-            logger.info('{} {}/{} {}'.format('=' * 35, epoch, hyp['end_epoch'], '=' * 35))
-            logger.info('{}'.format('*-' * 40))
             logger.info('>>> Epoch: [{}/{}]'.format(epoch, hyp['end_epoch']))
 
         # train for one epoch
@@ -136,9 +133,9 @@ def main(hyp, device, tb_writer=None):
                 tb_writer.add_scalar('Val_loss', val_loss, epoch)
 
         # Save checkpoint
-        if ((epoch % hyp['checkpoint_freq']) == 0):
+        if ((epoch % hyp['ckpt_freq']) == 0):
             model_state_dict, utils_state_dict = get_saved_state(model, optimizer, lr_scheduler, epoch, hyp)
-            save_checkpoint(hyp['ckptdir'], '3DOD', model_state_dict, utils_state_dict, epoch)
+            save_checkpoint(hyp['ckpt_dir'], '3DOD', model_state_dict, utils_state_dict, epoch)
 
         lr_scheduler.step()
         if tb_writer is not None:
@@ -147,19 +144,20 @@ def main(hyp, device, tb_writer=None):
     if tb_writer is not None:
         tb_writer.close()
 
-def validate(val_dataloader, model, device):
+def validate(val_dataloader, model, device, hyp):
     losses = AverageMeter('Loss', ':.4e')
-    criterion = KeyPointsMSELoss()
+    criterion = KeyPointsMSELoss(hyp['use_target_weight'])
 
     # switch to train mode
     model.eval()
     with torch.no_grad():
         for batch_idx, batch_data in enumerate(tqdm(val_dataloader)):
-            images, targets = batch_data
+            images, targets, target_weight = batch_data
 
             batch_size = images.size(0)
-            for k in targets.keys():
-                targets[k] = targets[k].to(device, non_blocking=True)
+            #for k in targets.keys():
+                #targets[k] = targets[k].to(device, non_blocking=True)
+            targets = targets.to(device, non_blocking=True)
             images = images.to(device, non_blocking=True).float()
             outputs = model(images)
             total_loss = criterion(outputs, targets, 0)

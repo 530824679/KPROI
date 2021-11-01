@@ -56,6 +56,6 @@ def create_lr_scheduler(hyp, optimizer):
     else:
         raise ValueError
 
-    plot_lr_scheduler(optimizer, lr_scheduler, hyp['end_epoch'], save_dir=hyp['logs_dir'], lr_type=hyp['lr_type'])
+    # plot_lr_scheduler(optimizer, lr_scheduler, hyp['end_epoch'], save_dir=hyp['logs_dir'], lr_type=hyp['lr_type'])
 
     return lr_scheduler

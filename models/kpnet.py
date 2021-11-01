@@ -159,7 +159,7 @@ class KeypointNet(nn.Module):
         else:
             logger.error('=> imagenet pretrained model dose not exist')
             logger.error('=> please download it first')
-            raise ValueError('imagenet pretrained model does not exist')
+            #raise ValueError('imagenet pretrained model does not exist')
 
 def build_model(pretrained, num_keypoints, is_train):
     model = KeypointNet(num_keypoints)

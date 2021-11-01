@@ -19,6 +19,7 @@ import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.postprocess import get_max_preds
+plt.switch_backend('agg')
 
 def plot_lr_scheduler(optimizer, scheduler, num_epochs=300, save_dir='', lr_type=''):
     # Plot LR simulating training for full num_epochs

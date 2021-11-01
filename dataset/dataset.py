@@ -135,14 +135,14 @@ class KeypointsDataset(Dataset):
         heatmap[0:self.num_keypoints] = target
 
         # Generate the target edge heatmap
-        bottom_left = np.array([keypoints[2][0], keypoints[3][1]])
-        heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
-        heatmap[self.num_keypoints + 1] = self.generate_target_edge(bottom_left, keypoints[3])
+        # bottom_left = np.array([keypoints[2][0], keypoints[3][1]])
+        # heatmap[self.num_keypoints] = self.generate_target_edge(keypoints[1], bottom_left)
+        # heatmap[self.num_keypoints + 1] = self.generate_target_edge(bottom_left, keypoints[3])
 
         heatmap = torch.from_numpy(heatmap)
         target_weight = torch.from_numpy(target_weight)
 
-        return image, heatmap, target_weight
+        return image.transpose(2, 0, 1), heatmap, target_weight
 
     def get_image(self, filename):
         image_path = os.path.join(self.images_dir, '{}.png'.format(filename))
@@ -262,7 +262,7 @@ class KeypointsDataset(Dataset):
             return target_edge
 
         except IndexError:
-            print("?????????")
+            print("generate target edge error")
 
 
     def generate_target_keypoints(self, keypoints, keypoints_vis):
