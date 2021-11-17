@@ -135,3 +135,4 @@ datas/
 .idea/
 saved_weights/
 visualized_images/
+tmp_visualize/

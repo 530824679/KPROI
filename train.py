@@ -34,6 +34,8 @@ from models.basenet import parameters_num
 from utils.general import to_python_float, get_latest_run, check_file, colorstr, increment_dir
 from utils.evaluate import calc_acc
 from utils.torch_utils import select_device, save_checkpoint, get_saved_state
+from utils.visualize import *
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
