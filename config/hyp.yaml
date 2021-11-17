@@ -29,11 +29,11 @@ heatmap_size: [64, 48]
 num_keypoints: 6
 pretrained: './weights/resnet50-19c8e357.pth'
 
-train_image: 'F:\\img'
-train_label: 'F:\\anno'
+train_image: '/home/chenwei/HDD/Project/3DVD/KPROI/datas/training/images'
+train_label: '/home/chenwei/HDD/Project/3DVD/KPROI/datas/training/labels'
 
-test_image: 'F:\\SuperB_Training_3W_20200928'
-test_label: 'F:\\SuperB_Training_3W_20200928\\Graviti_SuperB_Training_3W_20200928\\vdet'
+test_image: '/home/chenwei/HDD/Project/3DVD/KPROI/datas/training/images'
+test_label: '/home/chenwei/HDD/Project/3DVD/KPROI/datas/training/labels'
 
 use_dataset: "kitti_train"
 
