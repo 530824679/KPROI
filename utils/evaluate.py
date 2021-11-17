@@ -11,13 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
-import sys
 import numpy as np
-
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, parentdir)
-from KPROI.utils.postprocess import get_max_preds
+from utils.postprocess import get_max_preds
 
 def calc_dists(preds, target, normalize):
     preds = preds.astype(np.float32)

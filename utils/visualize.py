@@ -12,17 +12,13 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import sys
 import cv2
 import math
 import copy
 import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
-
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, parentdir)
-from KPROI.utils.postprocess import get_max_preds
+from utils.postprocess import get_max_preds
 plt.switch_backend('agg')
 
 def plot_lr_scheduler(optimizer, scheduler, num_epochs=300, save_dir='', lr_type=''):
@@ -72,11 +68,6 @@ def save_batch_image_with_keypoints(batch_image, batch_keypoints, batch_keypoint
             k = k + 1
     cv2.imwrite(filename, ndarr)
 
-def draw_2D_on_cv_image(image, points):
-    c1, c2 = (int(points[0][0]), int(points[0][1])), (int(points[1][0]), int(points[1][1]))
-    # 在img上画出框 c1: 起始点(x1, y1)  c2: 结束点(x2, y2)
-    cv2.rectangle(image, c1, c2, (255, 0, 0), thickness=1, lineType=cv2.LINE_AA)
-    return image
 
 def draw_3D_on_cv_image(image, preds):
     preds = preds.astype(int)
