@@ -115,6 +115,9 @@ def main(hyp, device, tb_writer=None):
     if torch.cuda.is_available():
         torch.cuda.set_device(device)
     model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=False)
+
+    model.load_state_dict(torch.load("./saved_weights/Epoch20_Epoch1_kitti.pth"))
+
     model = model.to(device)
 
     num_parameters = parameters_num(model)

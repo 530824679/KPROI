@@ -18,7 +18,7 @@ import copy
 import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
-from utils.postprocess import get_max_preds
+from KPROI.utils.postprocess import get_max_preds
 plt.switch_backend('agg')
 
 def plot_lr_scheduler(optimizer, scheduler, num_epochs=300, save_dir='', lr_type=''):
@@ -87,6 +87,18 @@ def draw_3D_on_cv_image(image, preds):
     cv2.line(image, tuple(top_right), tuple(preds[2]), (255, 0, 0), 1, cv2.LINE_AA)
     cv2.line(image, tuple(top_right), tuple(preds[3]), (255, 0, 0), 1, cv2.LINE_AA)
 
+    return image
+
+def draw_2D_on_cv_image(image, pt1, pt2):
+    pt1 = pt1.astype(int)
+    pt2 = pt2.astype(int)
+    bottom_left = np.array([pt1[0], pt2[1]]).astype(int)
+    top_right = np.array([pt2[0], pt1[1]]).astype(int)
+
+    cv2.line(image, tuple(bottom_left), tuple(pt1), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(bottom_left), tuple(pt2), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(top_right), tuple(pt1), (255, 0, 0), 1, cv2.LINE_AA)
+    cv2.line(image, tuple(top_right), tuple(pt2), (255, 0, 0), 1, cv2.LINE_AA)
     return image
 
 def save_batch_heatmaps(batch_image, batch_heatmaps, file_name, normalize=True, draw_3D=False):

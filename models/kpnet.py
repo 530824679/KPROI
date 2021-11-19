@@ -20,7 +20,7 @@ import torch.nn as nn
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
 
-from models.basenet import BasicBlock, Bottleneck
+from KPROI.models.basenet import BasicBlock, Bottleneck
 from collections import OrderedDict
 
 logger = logging.getLogger(__name__)

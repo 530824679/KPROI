@@ -48,9 +48,9 @@ def predict_keypoints_from_roi(model, img_roi):
     model.eval()
     with torch.no_grad():
         heatmaps = model(torch.FloatTensor(img_roi))
-        preds, _ = get_max_preds(heatmaps.detach().cpu().numpy())
-        preds = preds[0,: 4,:] *4 + 2
-        return preds
+        preds, maxvals = get_max_preds(heatmaps.detach().cpu().numpy())
+        preds = preds[0, :4, :] * 4 + 2
+        return preds, maxvals[0, :4]
 
 
 if __name__ == '__main__':
@@ -69,13 +69,15 @@ if __name__ == '__main__':
 
     device = select_device(opt.device, batch_size=hyp['batch_size'])
     model = build_model(hyp['pretrained'], hyp['num_keypoints'], is_train=False)
-    model.load_state_dict(torch.load("./saved_weights/Epoch20_RGB.pth"))
+    model.load_state_dict(torch.load('./saved_weights/Epoch20_Epoch1_kitti.pth'))
 
     test_image = hyp["test_image_kitti"]
     test_label = hyp['test_label_kitti']
-    calib_path = "F:\\Kitti\\object\\training\\calib"
+    calib_path = hyp['train_calib_kitti']
     input_size = np.array(hyp["input_size"])
     heatmap_size = np.array(hyp["heatmap_size"])
+
+    mode = "pred"
 
     frame_cnt = 0
     for filename in os.listdir(test_label):
@@ -97,54 +99,71 @@ if __name__ == '__main__':
                 if values[0] != "Car" and values[0] != "Van" and values[0] != "Truck":
                     continue
 
-                box3d = Box3D(line)
+                if mode == "gt":
 
-                with open(os.path.join(calib_path, '{}.txt'.format(os.path.splitext(filename)[0])), 'r') as calib_file:
-                    # Find all labels with shape "LShape" in one image
-                    calib_lines = calib_file.readlines()
-                    P2 = np.array([float(calib_lines[2].split()[i]) for i in range(1, 13)]).reshape((3, 4))
-                    R0_rect = np.array([float(calib_lines[4].split()[i]) for i in range(1, 10)]).reshape((3, 3))
-                    R0_rect = np.column_stack((np.row_stack((R0_rect, np.zeros(3))), np.zeros(4)))
-                    R0_rect[3][3] = 1
+                    box3d = Box3D(line)
 
-                box3d_pts = project_to_image(box3d.in_camera_coordinate(), P2)
-                image_bgr = draw_projected_box3d(image_bgr, box3d_pts)
+                    with open(os.path.join(calib_path, '{}.txt'.format(os.path.splitext(filename)[0])), 'r') as calib_file:
+                        # Find all labels with shape "LShape" in one image
+                        calib_lines = calib_file.readlines()
+                        P2 = np.array([float(calib_lines[2].split()[i]) for i in range(1, 13)]).reshape((3, 4))
+                        R0_rect = np.array([float(calib_lines[4].split()[i]) for i in range(1, 10)]).reshape((3, 3))
+                        R0_rect = np.column_stack((np.row_stack((R0_rect, np.zeros(3))), np.zeros(4)))
+                        R0_rect[3][3] = 1
 
-                if filename == '000057.txt':
-                    print("Box 3D:")
-                    for i in range(8):
-                        print(box3d_pts[:, i])
+                    box3d_pts = project_to_image(box3d.in_camera_coordinate(), P2)
+                    image_bgr = draw_projected_box3d(image_bgr, box3d_pts)
 
-                continue
+                    if filename == '000057.txt':
+                        print("Box 3D:")
+                        for i in range(8):
+                            print(box3d_pts[:, i])
 
-                # Find the ROI region and add 16 pixels for each edge
-                left_most = int(max(round(float(values[4])) - 16, 0))
-                right_most = int(min(round(float(values[6])) + 16, image_size[0] - 1))
-                width_roi = right_most - left_most
+                if mode == "pred":
 
-                top_most = int(max(round(float(values[5])) - 16, 0))
-                bottom_most = int(min(round(float(values[7])) + 16, image_size[1] - 1))
-                height_roi = bottom_most - top_most
+                    top_most = float(values[5])
+                    bottom_most = float(values[7])
+                    height_roi = bottom_most - top_most
 
-                if height_roi < 50 + 16 * 2:
-                    continue
+                    if height_roi < 16:
+                        continue
 
-                # Crop and resize the input image
-                img_roi = image[top_most:bottom_most, left_most:right_most]
-                img_roi = cv2.resize(img_roi, tuple(input_size))
+                    top_most = int(max(top_most - 0.1 * height_roi, 0))
+                    bottom_most = int(min(bottom_most + 0.1 * height_roi, image_size[1] - 1))
+                    height_roi = bottom_most - top_most
 
-                # Apply norm for the cropped image
-                img_roi = normalize_image(img_roi)
-                img_roi = img_roi.transpose(2, 0, 1).reshape([1, 3, input_size[1], input_size[0]])
+                    left_most = float(values[4])
+                    right_most = float(values[6])
+                    width_roi = right_most - left_most
 
-                # Predict!
-                keypoints = predict_keypoints_from_roi(model, img_roi)
-                keypoints[:, 0] = keypoints[:, 0] / input_size[0] * width_roi + left_most
-                keypoints[:, 1] = keypoints[:, 1] / input_size[1] * height_roi + top_most
+                    # Find the ROI region and add 1/10 of width for each edge
+                    left_most = int(max(left_most - 0.1 * width_roi, 0))
+                    right_most = int(min(right_most + 0.1 * width_roi, image_size[0] - 1))
+                    width_roi = right_most - left_most
 
-                image_bgr = draw_3D_on_cv_image(image_bgr, keypoints)
+                    # Crop and resize the input image
+                    img_roi = image[top_most:bottom_most, left_most:right_most]
+                    img_roi = cv2.resize(img_roi, tuple(input_size))
+
+                    # Apply norm for the cropped image
+                    img_roi = normalize_image(img_roi)
+                    img_roi = img_roi.transpose(2, 0, 1).reshape([1, 3, input_size[1], input_size[0]])
+
+                    # Predict!
+                    keypoints, maxvals = predict_keypoints_from_roi(model, img_roi)
+                    keypoints[:, 0] = keypoints[:, 0] / input_size[0] * width_roi + left_most
+                    keypoints[:, 1] = keypoints[:, 1] / input_size[1] * height_roi + top_most
+
+                    print(maxvals)
+
+                    if maxvals[0] < 0.6 or maxvals[1] < 0.6:
+                        image_bgr = draw_2D_on_cv_image(image_bgr, np.array([keypoints[:, 0].min(), keypoints[:, 1].min()]),
+                                                        np.array([keypoints[:, 0].max(), keypoints[:, 1].max()]))
+
+                    else:
+                        image_bgr = draw_3D_on_cv_image(image_bgr, keypoints)
 
         cv2.imshow(":)", image_bgr)
-        cv2.waitKey(50)
+        cv2.waitKey(0)
         # cv2.imwrite(os.path.join("Test", os.path.splitext(filename)[0] + ".png"), image_bgr)
     print("888")
